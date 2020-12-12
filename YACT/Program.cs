@@ -1,27 +1,25 @@
-﻿using System;
+﻿using CriCpkMaker;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.IO;
-using CriCpkMaker;
+using System.Text;
 
 namespace YACpkTool
 {
-    class Program
+    internal class Program
     {
-        const byte NO_ARGS     = 0x01;
-        const byte WRONG_USAGE = 0x02;
-        const byte HELP_INFO   = 0x04;
+        private const byte NO_ARGS     = 0x01;
+        private const byte WRONG_USAGE = 0x02;
+        private const byte HELP_INFO   = 0x04;
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
+
             if(args.Length == 0)
             {
                 PrintUsage(NO_ARGS);
                 return;
-            }
+            }            
 
             bool bList = false; // Old method, TODO update
             bool bVerbose = false;
@@ -40,7 +38,9 @@ namespace YACpkTool
             string replaceWith = null;
             string csvFileName = null;
 
-    // STEP 1 - PARSE THE ARGUMENTS
+            // STEP 1 - PARSE THE ARGUMENTS
+            
+            //args = CommandLineTools.CreateArgs(Environment.CommandLine);
             byte usageHelpFlags = 0x00;
             bool isUsageSimple = (args[0][0] != '-');
             if (!isUsageSimple) // Indicates technical usage vs simple usage; first argument must determine this
@@ -170,11 +170,11 @@ namespace YACpkTool
             {
                 if (packCompressCodec != null)
                 {
-                    if (String.Equals(packCompressCodec, "none", StringComparison.CurrentCultureIgnoreCase))
+                    if (string.Equals(packCompressCodec, "none", StringComparison.CurrentCultureIgnoreCase))
                     {
                         compressCodec = EnumCompressCodec.CodecDpk;
                     }
-                    else if (String.Equals(packCompressCodec, "layla", StringComparison.CurrentCultureIgnoreCase))
+                    else if (string.Equals(packCompressCodec, "layla", StringComparison.CurrentCultureIgnoreCase))
                     {
                         compressCodec = EnumCompressCodec.CodecLayla;
                     }/* Not implemented, according to CpkMaker
@@ -196,7 +196,7 @@ namespace YACpkTool
                 {
                     try
                     {
-                        Int32.TryParse(packDataAlign, out int tmp_da);
+                        int.TryParse(packDataAlign, out int tmp_da);
                         if ((tmp_da > 0) && ((tmp_da & (tmp_da - 1)) == 0))
                         {
                             dataAlign = (uint)tmp_da;
@@ -220,9 +220,9 @@ namespace YACpkTool
                 if(!(ValidateFilePathString(workingDir, ref csvFileName)))
                 {
                     Console.WriteLine("Error: Unable to prepare a file path for the CSV file!");
-                    return;
                 }
-                if(!String.Equals(Path.GetExtension(csvFileName), ".csv", StringComparison.OrdinalIgnoreCase))
+
+                if (!string.Equals(Path.GetExtension(csvFileName), ".csv", StringComparison.OrdinalIgnoreCase))
                 {
                     csvFileName += ".csv";
                 }
@@ -238,9 +238,9 @@ namespace YACpkTool
             {
                 if (!cpkMaker.AnalyzeCpkFile(inFileName))
                 {
-                    Console.WriteLine("Error: AnalyzeCpkFile returned false!");
                     return;
                 }
+
                 cpkFileData = cpkMaker.FileData;
             }
 
@@ -266,10 +266,8 @@ namespace YACpkTool
                         extWriter.WaitForComplete();
                         cManager.Copy(cpkReader, extWriter, cFileInfo.Offset, cFileInfo.Filesize, CAsyncFile.CopyMode.ReadDecompress, cFileInfo.Extractsize);
                         cManager.WaitForComplete();
-                        Console.WriteLine("Successfully extracted the file!");
                     } else
                     {
-                        Console.WriteLine("Error: Unable to locate the specified file in the CPK \"" + extractWhat + "\"");
                         return;
                     }
                 } else // Just extract everything
@@ -282,7 +280,6 @@ namespace YACpkTool
                 {
                     if (!ExportCsv(csvFileName, Path.GetFileNameWithoutExtension(outFileName), ref cpkFileData))
                     {
-                        Console.WriteLine("Error: Something went wrong exporting CSV file!");
                         return;
                     }
                 }
@@ -295,7 +292,7 @@ namespace YACpkTool
                     if(AnalyzeCsv(csvFileName, dataAlign, out CpkMaker csvCpkMaker))
                     {
                         cpkMaker= csvCpkMaker;
-                    } else { Console.WriteLine("Error: AnalyzeCsv() returned false! Invalid CSV entry?"); return; }
+                    } else { return; }
                     
                     //if (true) return; // iz debugging PokeSlow
 
@@ -337,7 +334,6 @@ namespace YACpkTool
                 {
                     if(!(ValidateFilePathString(workingDir, ref replaceWith)))
                     {
-                        Console.WriteLine("Error: Unable to locate the specified file to inject.");
                         return;
                     }
 
@@ -345,7 +341,7 @@ namespace YACpkTool
                     {
                         outFileName = (workingDir.Replace('/', '\\') + "\\new_" + Path.GetFileName(inFileName));
                     }
-                    if (!(String.Equals(Path.GetExtension(outFileName), ".cpk", StringComparison.OrdinalIgnoreCase)))
+                    if (!(string.Equals(Path.GetExtension(outFileName), ".cpk", StringComparison.OrdinalIgnoreCase)))
                     {
                         outFileName += ".cpk";
                     }
@@ -355,7 +351,6 @@ namespace YACpkTool
                         cFileInfo.GroupString, cFileInfo.AttributeString, cFileInfo.DataAlign);
                     cpkMaker.FileData.UpdateFileInfoPackingOrder();
 
-                    Console.WriteLine("Preparing new CPK...");
                     File.Create(outFileName).Close();
                     cpkMaker.StartToBuild(outFileName);
                     cpkMaker.WaitForComplete();
@@ -366,7 +361,6 @@ namespace YACpkTool
                     CAsyncFile patchedFile = new CAsyncFile(2);
                     patchedFile.WriteOpen(outFileName, true);
                     patchedFile.WaitForComplete();
-                    Console.WriteLine("Patching in files...");
 
                     for (int i = 0; i < cpkMaker.FileData.FileInfos.Count; i++)
                     {
@@ -397,12 +391,9 @@ namespace YACpkTool
                         }
                         //if (true) return; // Used with debugging
                     }
-
-                    Console.WriteLine("Patch complete!");
                 }
                 else
                 {
-                    Console.WriteLine("Error: Unable to locate the specified file in the CPK \"" + replaceWhat + "\"");
                     return;
                 }
             }
@@ -416,7 +407,6 @@ namespace YACpkTool
                 {
                     if(!ExportCsv(csvFileName, Path.GetFileNameWithoutExtension(inFileName), ref cpkFileData))
                     {
-                        Console.WriteLine("Error: Something went wrong exporting CSV file!");
                         return;
                     }
                 }
@@ -430,49 +420,29 @@ namespace YACpkTool
     // STEP 4 - PROGRESS LOOP FOR WHERE APPLICABLE (after I complete the above versions)
             if (doExtract || doPack)
             {
-                int last_p = -1;
                 int percent = 0;
                 status = cpkMaker.Execute();
                 while ((status > Status.Stop) && (percent < 100))
                 {
                     percent = (int)Math.Floor(cpkMaker.GetProgress());
-                    if (percent > last_p)
-                    {
-                        Console.CursorLeft = 0;
-                        Console.Write(percent.ToString() + "% " + (doExtract ? "extracted" : "packed") + "...");
-                        last_p = percent;
-                    }
                     status = cpkMaker.Execute();
                 }
-                Console.WriteLine("");
-                Console.WriteLine("Status = " + status.ToString());
             }
-
-            Console.WriteLine("\nProcess finished (hopefully) without issues!");
         }
-        
+
         // Simple function to use for file paths other than input files
         // Please never send a null filename.
-        static bool ValidateFilePathString(string workingPath, ref string filename)
+        private static bool ValidateFilePathString(string workingPath, ref string filename)
         {
-            string uriPrefix = "file:///";
-            string uriString = null;
             // Cheap botch to check if it's an absolute path
-            if (!((filename.Length > 3) && String.Equals(filename.Substring(1, 2).Replace('\\', '/'), ":/")))
+            if (!((filename.Length > 3) && string.Equals(filename.Substring(1, 2).Replace('\\', '/'), ":/")))
             {
                 filename = workingPath + "\\" + filename;
             }
-            uriString = uriPrefix + filename.Replace('\\', '/');
-            if (!Uri.IsWellFormedUriString(uriString, UriKind.Absolute))
-            {
-                //Console.WriteLine("DEBUG: uriString: \"" + uriString + "\"");
-                return false;
-            }
-            filename = filename.Replace('/', '\\');
             return true;
         }
 
-        static bool AnalyzeCsv(string csvPath, uint dataAlign, out CpkMaker csvCpkMaker)
+        private static bool AnalyzeCsv(string csvPath, uint dataAlign, out CpkMaker csvCpkMaker)
         {
             csvCpkMaker = new CpkMaker();
             string[] csvLines = File.ReadAllLines(csvPath);
@@ -490,16 +460,16 @@ namespace YACpkTool
                     // Unlike CriWare's official tools, I'm not allowing leaving out the content file path (not right now anyway)
                     string contentPath = csvRow[1].Replace("\"", "").Replace(" ", "");
                     // If omitted, it will be the last used id +1
-                    int regId = ((3 <= csvRow.Length && Int32.TryParse(csvRow[2], out int id)) ? id : (int)(lastId));
+                    int regId = ((3 <= csvRow.Length && int.TryParse(csvRow[2], out int id)) ? id : (int)(lastId));
                     if (regId != lastId) { useIds = true; lastId = (uint)regId; }
                     // I'm using a level of trust here that if it's not this, then it must be uncompressed.
                     bool compress = ((4 <= csvRow.Length) &&
-                        ((String.Equals(csvRow[3].Replace(" ", ""), "Compress", StringComparison.InvariantCultureIgnoreCase)) ||
-                          String.Equals(csvRow[3].Replace(" ", ""), "C", StringComparison.InvariantCultureIgnoreCase))) ? true : false;
+                        ((string.Equals(csvRow[3].Replace(" ", ""), "Compress", StringComparison.InvariantCultureIgnoreCase)) ||
+                          string.Equals(csvRow[3].Replace(" ", ""), "C", StringComparison.InvariantCultureIgnoreCase))) ? true : false;
                     // No comment to be said
                     string groups = ((5 <= csvRow.Length)) ? csvRow[4].Replace("\"", "").Replace(" ", "") : "";
                     string attributes = ((6 <= csvRow.Length)) ? csvRow[5].Replace("\"", "").Replace(" ", "") : "";
-                    if (!String.Equals(groups.Replace(" ", ""), "")) { useGroups = true; }
+                    if (!string.Equals(groups.Replace(" ", ""), "")) { useGroups = true; }
 
                     csvCpkMaker.AddFile(filePath, contentPath, lastId++, compress, groups, attributes, dataAlign, false, regId);
                 }
@@ -513,11 +483,11 @@ namespace YACpkTool
             return true;
         }
 
-        static bool ExportCsv(string csvPath, string cpkName, ref CFileData fileData)
+        private static bool ExportCsv(string csvPath, string cpkName, ref CFileData fileData)
         {
             try
             {
-                List<String> csvContents = new List<string>();
+                List<string> csvContents = new List<string>();
                 foreach(CFileInfo cfi in fileData.FileInfos)
                 {
                     string lineString = (
@@ -535,8 +505,7 @@ namespace YACpkTool
             return true;
         }
 
-
-        static void PrintUsage(byte printFlags)
+        private static void PrintUsage(byte printFlags)
         {
             Console.WriteLine("");
             if ((printFlags & (NO_ARGS | WRONG_USAGE)) > 0)
